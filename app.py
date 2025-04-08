@@ -1,8 +1,75 @@
 import streamlit as st
-import random
 import numpy as np
 
-# Minimax AI Logic
+# Set wide layout
+st.set_page_config(layout="centered")
+
+# Custom CSS for styling
+st.markdown("""
+    <style>
+        .stButton>button {
+            font-size: 40px !important;
+            height: 80px;
+            width: 80px;
+            border-radius: 10px;
+        }
+        .winner-box {
+            font-size: 28px;
+            font-weight: bold;
+            padding: 10px;
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            background-color: #eaffea;
+            text-align: center;
+        }
+        .tie-box {
+            font-size: 28px;
+            font-weight: bold;
+            padding: 10px;
+            border: 2px solid #999;
+            border-radius: 10px;
+            background-color: #f0f0f0;
+            text-align: center;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# Title and Mode
+st.title("🎮 Tic-Tac-Toe")
+mode = st.radio("Select Game Mode:", ("Player vs AI", "Multiplayer (P1 vs P2)"), horizontal=True)
+
+# Initialize game state
+if 'board' not in st.session_state:
+    st.session_state.board = [[" " for _ in range(3)] for _ in range(3)]
+if 'turn' not in st.session_state:
+    st.session_state.turn = 0
+if 'winner' not in st.session_state:
+    st.session_state.winner = None
+if 'mode' not in st.session_state:
+    st.session_state.mode = mode
+
+# Reset if mode changes
+if st.session_state.mode != mode:
+    st.session_state.board = [[" " for _ in range(3)] for _ in range(3)]
+    st.session_state.turn = 0
+    st.session_state.winner = None
+    st.session_state.mode = mode
+
+# --- Game logic functions ---
+def check_win(board, player):
+    for row in board:
+        if all([cell == player for cell in row]):
+            return True
+    for col in range(3):
+        if all([board[row][col] == player for row in range(3)]):
+            return True
+    if all([board[i][i] == player for i in range(3)]) or all([board[i][2 - i] == player for i in range(3)]):
+        return True
+    return False
+
+def check_tie(board):
+    return all(cell != " " for row in board for cell in row)
+
 def minimax(board, depth, is_maximizing):
     if check_win(board, "O"):
         return 1
@@ -32,7 +99,6 @@ def minimax(board, depth, is_maximizing):
                     best_score = min(score, best_score)
         return best_score
 
-# AI move based on Minimax
 def ai_move(board):
     best_score = -float('inf')
     best_move = None
@@ -47,84 +113,52 @@ def ai_move(board):
                     best_move = (r, c)
     return best_move
 
-# Function to check win
-def check_win(board, player):
-    for row in board:
-        if all([cell == player for cell in row]):
-            return True
-    for col in range(3):
-        if all([board[row][col] == player for row in range(3)]):
-            return True
-    if board[0][0] == player and board[1][1] == player and board[2][2] == player:
-        return True
-    if board[0][2] == player and board[1][1] == player and board[2][0] == player:
-        return True
-    return False
-
-# Function to check for a tie
-def check_tie(board):
-    return all(cell != " " for row in board for cell in row)
-
-# Streamlit UI for Tic-Tac-Toe
-st.title("Tic-Tac-Toe with AI")
-st.write("### Play against AI (Minimax Algorithm)")
-
-# Initialize game state
-if 'board' not in st.session_state:
-    st.session_state.board = [[" " for _ in range(3)] for _ in range(3)]
-if 'turn' not in st.session_state:
-    st.session_state.turn = 0
-if 'winner' not in st.session_state:
-    st.session_state.winner = None
-if 'ai_playing' not in st.session_state:
-    st.session_state.ai_playing = True  # Start with AI as opponent
-
-# Display the board as a grid of buttons
-def display_board():
-    board_display = ""
-    for row in st.session_state.board:
-        board_display += f"| {' | '.join(row)} |\n"
-        board_display += "-"*15 + "\n"
-    return board_display
-
-# Handle user move with clickable buttons
 def make_move(row, col):
-    if st.session_state.board[row][col] == " ":
+    if st.session_state.board[row][col] == " " and not st.session_state.winner:
         player = "X" if st.session_state.turn % 2 == 0 else "O"
         st.session_state.board[row][col] = player
+
         if check_win(st.session_state.board, player):
             st.session_state.winner = player
-            st.write(f"Player {player} wins!")
         elif check_tie(st.session_state.board):
-            st.write("It's a tie!")
+            st.session_state.winner = "Tie"
         else:
             st.session_state.turn += 1
-            if st.session_state.ai_playing and st.session_state.turn % 2 != 0:
-                ai_move_position = ai_move(st.session_state.board)
-                st.session_state.board[ai_move_position[0]][ai_move_position[1]] = "O"
+
+        # AI move if needed
+        if st.session_state.mode == "Player vs AI" and st.session_state.turn % 2 != 0 and not st.session_state.winner:
+            move = ai_move(st.session_state.board)
+            if move:
+                st.session_state.board[move[0]][move[1]] = "O"
                 if check_win(st.session_state.board, "O"):
                     st.session_state.winner = "O"
-                    st.write(f"AI wins!")
                 elif check_tie(st.session_state.board):
-                    st.write("It's a tie!")
+                    st.session_state.winner = "Tie"
                 else:
                     st.session_state.turn += 1
-    else:
-        st.write("This position is already taken. Try again.")
 
-# Create buttons for each cell in the board
-for row in range(3):
+# Display the board
+for r in range(3):
     cols = st.columns(3)
-    for col in range(3):
-        if st.session_state.board[row][col] == " ":
-            button = cols[col].button(f"{row},{col}", key=f"button_{row}_{col}")
-            if button:
-                make_move(row, col)
+    for c in range(3):
+        symbol = st.session_state.board[r][c]
+        display = "❌" if symbol == "X" else "⭕" if symbol == "O" else "⬜"
+        if symbol == " " and not st.session_state.winner:
+            if cols[c].button(display, key=f"{r}_{c}"):
+                make_move(r, c)
         else:
-            cols[col].button(st.session_state.board[row][col], key=f"button_{row}_{col}", disabled=True)
+            cols[c].button(display, key=f"{r}_{c}", disabled=True)
 
-# Reset the game
-if st.button("Reset Game"):
+# Show winner or tie
+if st.session_state.winner:
+    if st.session_state.winner == "Tie":
+        st.markdown('<div class="tie-box">🤝 It\'s a tie!</div>', unsafe_allow_html=True)
+    else:
+        name = "AI" if st.session_state.mode == "Player vs AI" and st.session_state.winner == "O" else f"Player {st.session_state.winner}"
+        st.markdown(f'<div class="winner-box">🎉 {name} wins!</div>', unsafe_allow_html=True)
+
+# Reset button
+if st.button("🔄 Reset Game"):
     st.session_state.board = [[" " for _ in range(3)] for _ in range(3)]
     st.session_state.turn = 0
     st.session_state.winner = None
