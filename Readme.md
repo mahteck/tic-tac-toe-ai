@@ -26,8 +26,7 @@ The game is built using **Python** and **Streamlit**, making it an interactive, 
 ## 🧪 Demo
 
 You can play the live version of the game here:  
-[**Live Demo**](https://mahteck-tic-tac-toe-ai-app-a9ig1o.streamlit.app/)  
-*(Replace with your actual Streamlit URL after publishing)*
+[**Live Demo**](https://mahteck-tic-tac-toe-ai-app-a9ig1o.streamlit.app/)
 
 ---
 
